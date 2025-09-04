@@ -34,7 +34,7 @@
       "trace_id": "用于追踪请求的唯一ID",
       "question": "用户的输入或提示",
       "answer": "AI模型的回复",
-      "ai_log": "{"model_name":"qwen-vl", "usage":{"total_tokens": 120}}",
+      "ai_log": "{"model_name":"", "usage":{"total_tokens": 0}}",
       "response_code": 200,
       "duration": 540
     }
