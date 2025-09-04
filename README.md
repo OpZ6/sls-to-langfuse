@@ -1,4 +1,4 @@
-# SLS to Langfuse 实时同步服务
+# 阿里云SLS to Langfuse 实时同步服务
 
 <p align="left">
   <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/Langfuse-Integration-5A34D2?style=for-the-badge" alt="Langfuse">
 </p>
 
-一个高性能的实时数据同步服务，能将阿里云 SLS 中的 AI 网关访问日志自动解析并发送到 Langfuse，用于 AI 应用的观测和分析。
+一个高性能的实时数据同步服务，能将阿里云 SLS 中的 AI 网关日志自动解析并发送到 Langfuse，用于 AI 应用的观测和分析。支持docker一键部署和本地测试部署。
 
 ## 🎯 核心功能
 
@@ -222,3 +222,7 @@ docker stop sls_processor_instance && docker rm sls_processor_instance
   <img src="assets/langfuse_ui.png" alt="Langfuse UI 追踪界面" width="800">
 </p>
 
+## 待开发任务
+
+-   Agent调用的同trace_id多日志智能缓存，聚合展示能力
+-   save_check_point()中SLS trace_id与langfuse trace_id可能存在的冲突处理 **（紧急）**
