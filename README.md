@@ -34,7 +34,7 @@
       "trace_id": "用于追踪请求的唯一ID",
       "question": "用户的输入或提示",
       "answer": "AI模型的回复",
-      "ai_log": "{"model_name":"", "usage":{"total_tokens": 0}}",
+      "ai_log": "{"model_name":"qwen-vl", "usage":{"total_tokens": 120}}",
       "response_code": 200,
       "duration": 540
     }
@@ -104,7 +104,7 @@ docker ps | grep sls_processor_instance
 # 查看实时日志
 docker logs -f sls_processor_instance
 ```
-如果所有配置都正确，您应该能看到服务已启动并正在从 SLS 分片中拉取数据的日志。
+如果所有配置都正确，应该能看到服务已启动并正在从 SLS 分片中拉取数据的日志。
 
 ## 🐳 Docker 镜像与自定义
 ### 镜像源说明
@@ -113,14 +113,14 @@ docker logs -f sls_processor_instance
 > ```dockerfile
 > FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/python:3.11-slim
 > ```
-> 如果您在海外，或希望使用官方 Docker Hub 镜像源，请修改 `Dockerfile` 文件：
+> 如果在海外，或希望使用官方 Docker Hub 镜像源，请修改 `Dockerfile` 文件：
 > ```dockerfile
 > FROM python:3.11-slim
 > ```
-> 同样，Python 依赖包默认使用清华 `pip` 镜像源进行安装。如果不需要，您可以在 `Dockerfile` 的 `RUN` 命令中移除该配置。
+> 同样，Python 依赖包默认使用清华 `pip` 镜像源进行安装。如果不需要，可以在 `Dockerfile` 的 `RUN` 命令中移除该配置。
 
 ### 自定义构建
-如果您修改了源代码，可以自行构建和推送镜像：
+如果修改了源代码，可以自行构建和推送镜像：
 ```bash
 # 构建自定义镜像
 docker build -t your-registry/sls-to-langfuse:latest .
@@ -134,15 +134,15 @@ docker push your-registry/sls-to-langfuse:latest
 
 | 变量名                       | 是否必需 | 默认值   | 描述                                                                    |
 | ------------------------------ | :------: | :-------: | ----------------------------------------------------------------------- |
-| `ALIYUN_ENDPOINT`              |    ✅    |    —    | 您所在区域的阿里云 SLS API 端点。                                       |
+| `ALIYUN_ENDPOINT`              |    ✅    |    —    | 所在区域的阿里云 SLS API 端点。                                       |
 | `ALIYUN_ACCESS_KEY_ID`         |    ✅    |    —    | 阿里云 Access Key ID。                                              |
 | `ALIYUN_ACCESS_KEY_SECRET`     |    ✅    |    —    | 阿里云 Access Key Secret。                                          |
 | `ALIYUN_PROJECT_NAME`          |    ✅    |    —    |  SLS 项目名称。                                                     |
 | `ALIYUN_LOGSTORE_NAME`         |    ✅    |    —    | 存储网关日志的 SLS 日志库名称。                                         |
 | `ALIYUN_CONSUMER_GROUP_NAME`   |    ✅    |    —    | **至关重要**：唯一的消费组名称。请参考下方说明。                        |
 | `LANGFUSE_HOST`                |    ✅    |    —    |  Langfuse 实例的完整 URL。                                          |
-| `LANGFUSE_PUBLIC_KEY`          |    ✅    |    —    | 您 Langfuse 项目中的公钥 (Public Key)。                                 |
-| `LANGFUSE_SECRET_KEY`          |    ✅    |    —    | 您 Langfuse 项目中的私钥 (Secret Key)。                                 |
+| `LANGFUSE_PUBLIC_KEY`          |    ✅    |    —    |  Langfuse 项目中的公钥 (Public Key)。                                 |
+| `LANGFUSE_SECRET_KEY`          |    ✅    |    —    |  Langfuse 项目中的私钥 (Secret Key)。                                 |
 | `LANGFUSE_SDK_TIMEOUT`         |    ❌    |   `30`    | 调用 Langfuse API 的超时时间（秒）。                                    |
 | `TZ`                           |    ❌    |   `UTC`   | 容器的时区，以确保日志时间戳正确。                                      |
 | `LOG_FORMAT`                   |    ❌    |  `human`  | `human` (易读，用于开发)，`json` (结构化，用于生产)。                  |
