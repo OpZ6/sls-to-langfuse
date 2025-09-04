@@ -31,10 +31,8 @@ LOGSTORE_NAME = os.getenv("ALIYUN_LOGSTORE_NAME")
 CONSUMER_GROUP_NAME = os.getenv("ALIYUN_CONSUMER_GROUP_NAME")
 CONSUMER_NAME_PREFIX = 'realtime-processor'
 
-# Langfuse 配置 (您的第二个脚本中的配置)
-os.environ['LANGFUSE_SECRET_KEY'] = "sk-lf-db0fe111-d13b-4bdc-9937-ee8f06985d6e"
-os.environ['LANGFUSE_PUBLIC_KEY'] = "pk-lf-c4d46db6-3ab6-41e6-8620-a38684a8d794" 
-os.environ['LANGFUSE_HOST'] = "http://47.100.30.138:3000"
+# 将默认的5秒超时，大幅延长到30秒，以适应可能的网络延迟或服务器重负载
+os.environ['LANGFUSE_SDK_TIMEOUT'] = "30"
 
 def ensure_consumer_group(client, project, logstore, group_name):
     """检查并创建消费组，避免程序启动因已存在而出错。"""
