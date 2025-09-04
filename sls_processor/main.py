@@ -12,26 +12,36 @@ from pythonjsonlogger import jsonlogger
 
 load_dotenv()
 
-# --- ✨ 全新的、生产级的JSON日志配置 ---
-# 移除旧的 logging.basicConfig
-# logging.basicConfig(...) 
+# --- ✨ 根据环境变量选择日志格式 ---
+LOG_FORMAT = os.getenv('LOG_FORMAT', 'human')  # human 或 json
 
-# 获取根logger
 logger = logging.getLogger()
-# 设置日志级别
 logger.setLevel(logging.INFO)
 
-# 创建一个输出到控制台的handler
 logHandler = logging.StreamHandler()
 
-# 创建一个JSON格式化器，并定义我们希望在日志中看到的字段
-formatter = jsonlogger.JsonFormatter(
-    '%(timestamp)s %(levelname)s %(name)s %(threadName)s %(message)s'
-)
+if LOG_FORMAT.lower() == 'json':
+    # JSON格式（生产环境）
+    from pythonjsonlogger.json import JsonFormatter
+    
+    class CustomJsonFormatter(JsonFormatter):
+        def add_fields(self, log_record, record, message_dict):
+            super(CustomJsonFormatter, self).add_fields(log_record, record, message_dict)
+            if not log_record.get('timestamp'):
+                log_record['timestamp'] = self.formatTime(record)
+    
+    formatter = CustomJsonFormatter(
+        fmt='%(timestamp)s %(levelname)s %(name)s %(threadName)s %(message)s',
+        json_ensure_ascii=False
+    )
+else:
+    # 人类可读格式（开发环境）
+    formatter = logging.Formatter(
+        '%(asctime)s [%(levelname)s] %(name)s(%(threadName)s): %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
 
-# 为handler设置格式化器
 logHandler.setFormatter(formatter)
-# 为根logger添加handler
 logger.addHandler(logHandler)
 # --- JSON日志配置结束 ---
 
