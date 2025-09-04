@@ -1,7 +1,7 @@
 # Dockerfile
 
 # 1. 使用官方的、轻量的Python基础镜像
-FROM python:3.11-slim
+FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/python:3.11-slim
 
 # 2. 设置工作目录
 WORKDIR /app
