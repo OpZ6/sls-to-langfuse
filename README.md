@@ -34,7 +34,7 @@
       "trace_id": "用于追踪请求的唯一ID",
       "question": "用户的输入或提示",
       "answer": "AI模型的回复",
-      "ai_log": "",
+      "ai_log": "{"model_name":"qwen-vl", "usage":{"total_tokens": 120}}",
       "response_code": 200,
       "duration": 540
     }
@@ -203,3 +203,22 @@ docker exec -it sls_processor_instance /bin/bash
 # 停止并移除服务容器
 docker stop sls_processor_instance && docker rm sls_processor_instance
 ```
+
+## 运行效果展示
+
+### 1. 终端日志输出
+
+容器成功启动后，将在终端看到类似下面的日志，表明服务已连接到阿里云SLS并开始消费数据。
+
+<p align="center">
+  <img src="assets/log_success.png" alt="服务运行日志" width="800">
+</p>
+
+### 2. Langfuse UI 界面
+
+数据成功发送到 Langfuse 后，可以在其 UI 界面看到追踪到的请求，包括请求详情、耗时和 Token 用量等。
+
+<p align="center">
+  <img src="assets/langfuse_ui.png" alt="Langfuse UI 追踪界面" width="800">
+</p>
+
