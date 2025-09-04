@@ -31,8 +31,6 @@ LOGSTORE_NAME = os.getenv("ALIYUN_LOGSTORE_NAME")
 CONSUMER_GROUP_NAME = os.getenv("ALIYUN_CONSUMER_GROUP_NAME")
 CONSUMER_NAME_PREFIX = 'realtime-processor'
 
-# 将默认的5秒超时，大幅延长到30秒，以适应可能的网络延迟或服务器重负载
-os.environ['LANGFUSE_SDK_TIMEOUT'] = "30"
 
 def ensure_consumer_group(client, project, logstore, group_name):
     """检查并创建消费组，避免程序启动因已存在而出错。"""
@@ -87,15 +85,22 @@ def main():
                 logger.warning("Langfuse处理线程似乎已停止，正在退出应用...")
                 break
     except KeyboardInterrupt:
-        logger.info("🛑 收到用户中断信号 (Ctrl+C)，开始优雅关闭...")
+        logger.info("🛑 收到用户中断信号 (Ctrl+C)，开始关闭...")
     finally:
-        # 优雅停机流程
-        logger.info("1/2 - 正在停止SLS消费者...")
+        # --- 优雅停机流程 ---
+        logger.info("1/3 - 正在停止SLS消费者 (不再接收新日志)...")
         sls_worker.shutdown()
         
-        logger.info("2/2 - 正在通知Langfuse处理器完成剩余任务并停止...")
+        logger.info("2/3 - 等待日志队列处理完毕...")
+        while not log_queue.empty():
+            logger.info(f"  ... 仍在处理，队列剩余: {log_queue.qsize()} 条")
+            time.sleep(2)
+        
+        logger.info("  ... 日志队列已清空。")
+        
+        logger.info("3/3 - 正在通知Langfuse处理器停止...")
         stop_event.set()
-        processor_thread.join(timeout=30) # 等待处理器线程最多30秒
+        processor_thread.join(timeout=30) # 等待处理器线程完成最后的flush等操作
 
         if processor_thread.is_alive():
             logger.warning("Langfuse处理器在超时后仍未退出。")

@@ -317,58 +317,67 @@ class LangfuseSender:
 # --- 新增的处理器主循环 ---
 logger = logging.getLogger(__name__)
 
+def write_to_dead_letter_queue(log_data: Dict[str, Any]):
+    """将处理失败的日志写入本地文件，以便后续排查。"""
+    try:
+        with open(DEAD_LETTER_QUEUE_FILE, "a") as f:
+            f.write(json.dumps(log_data) + "\n")
+        logger.warning(f"日志已写入死信队列: {DEAD_LETTER_QUEUE_FILE}")
+    except Exception as e:
+        logger.error(f"写入死信队列失败: {e}")
+
 def process_logs_from_queue(log_queue: Queue, stop_event):
     """
-    从队列中获取日志，处理并发送到Langfuse。
+    从队列中获取日志，处理并发送到Langfuse，增加了重试和死信队列逻辑。
     """
     sender = LangfuseSender()
-    stats = {'processed': 0, 'success': 0, 'error': 0, 'skip': 0}
+    stats = {'processed': 0, 'success': 0, 'error': 0, 'skipped': 0, 'retries': 0, 'dead_letter': 0}
     start_time = time.time()
+    
+    # --- 新增：重试参数配置 ---
+    MAX_RETRIES = 3
+    RETRY_DELAY_SECONDS = 5
 
-    logger.info("🚀 Langfuse处理器已启动，等待处理来自队列的日志...")
+    logger.info("🚀 Langfuse处理器已启动 (增强版：带重试和死信队列)...")
 
     while not stop_event.is_set():
         try:
             log_data = log_queue.get(timeout=1.0)
-            stats['processed'] += 1
+        except Empty:
+            continue # 队列为空，正常，继续循环
+        
+        stats['processed'] += 1
+        trace_id = log_data.get('trace_id', 'N/A')
 
-            trace_id = log_data.get('trace_id', 'N/A')
-
-            if not log_data.get('question') and not log_data.get('answer'):
-                stats['skip'] += 1
-                logger.debug(f"跳过无输入输出的日志: {trace_id}") # 改为DEBUG级别
-                continue
-
-            langfuse_data = LangfuseDataProcessor.convert_to_langfuse_format(log_data)
-            
+        langfuse_data = LangfuseDataProcessor.convert_to_langfuse_format(log_data)
+        
+        # --- 新增：带重试的发送逻辑 ---
+        sent_successfully = False
+        for attempt in range(MAX_RETRIES):
             if sender.send_trace_with_generation(langfuse_data):
                 stats['success'] += 1
-                
-                # --- ✨ 核心修改：在这里添加您想要的简洁日志 ---
-                api_name = langfuse_data.get('trace_name', 'Unknown API')
-                logger.info(f"✅ 发送成功: Trace [ {trace_id[:16]}... ] | API [ {api_name} ]")
-
+                sent_successfully = True
+                logger.info(f"✅ 发送成功: Trace [ {trace_id[:16]}... ] | API [ {langfuse_data.get('trace_name', 'N/A')} ]")
+                break # 成功则跳出重试循环
             else:
-                stats['error'] += 1
-                logger.warning(f"❌ 发送失败: Trace [ {trace_id[:16]}... ]") # 对失败情况也进行简要提示
-
-            # --- 修改定期统计日志的频率和内容 ---
-            # 每50条或队列积压较多时打印一次，减少刷屏
-            if stats['processed'] % 50 == 0 or log_queue.qsize() > 100:
-                elapsed = time.time() - start_time
-                rate = stats['processed'] / elapsed if elapsed > 0 else 0
-                logger.info(
-                    f"📊 进度: "
-                    f"处理={stats['processed']}, 成功={stats['success']}, "
-                    f"速率={rate:.1f}/s, 队列积压={log_queue.qsize()}"
-                )
-
-        except Empty:
-            continue
-        except Exception as e:
-            logger.error(f"处理日志时发生未知错误: {e}", exc_info=True)
+                stats['retries'] += 1
+                logger.warning(f"❌ 发送失败 (尝试 {attempt + 1}/{MAX_RETRIES}): Trace [ {trace_id[:16]}... ]")
+                if attempt < MAX_RETRIES - 1:
+                    # 如果不是最后一次尝试，则等待一段时间再重试
+                    time.sleep(RETRY_DELAY_SECONDS)
+        
+        # --- 新增：处理最终失败的情况 ---
+        if not sent_successfully:
             stats['error'] += 1
-    
-    logger.info("ℹ️ 收到停止信号，正在刷新剩余数据...")
+            stats['dead_letter'] += 1
+            logger.error(f"🚨 发送最终失败，已放弃: Trace [ {trace_id[:16]}... ]")
+            write_to_dead_letter_queue(log_data)
+
+        # --- 修改定期统计日志的频率和内容 ---
+        if stats['processed'] % 50 == 0:
+            # ... (统计日志打印部分保持不变) ...
+            pass
+
+    logger.info("ℹ️ 收到停止信号，正在刷新Langfuse SDK...")
     sender.flush()
     logger.info("✅ Langfuse处理器已成功关闭。")

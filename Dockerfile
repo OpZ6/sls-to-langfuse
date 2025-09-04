@@ -1,6 +1,6 @@
 # Dockerfile
 
-# 1. 使用官方的、轻量的Python基础镜像
+# 1. 使用一个已验证可用的、位于华为云的Python镜像作为基础
 FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/python:3.11-slim
 
 # 2. 设置工作目录
@@ -10,8 +10,7 @@ WORKDIR /app
 COPY requirements.txt .
 
 # 4. 安装依赖 (使用 --no-cache-dir 减小镜像体积)
-# 这一步单独执行可以利用Docker的层缓存机制，当代码改变但依赖不变时，无需重新安装
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 # 5. 将我们的应用代码复制到镜像中
 COPY ./sls_processor ./sls_processor
