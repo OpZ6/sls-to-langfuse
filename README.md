@@ -7,11 +7,9 @@
   <img src="https://img.shields.io/badge/Langfuse-Integration-5A34D2?style=for-the-badge" alt="Langfuse">
 </p>
 
-一个高性能的实时数据同步服务，能将阿里云 SLS 中的 AI 网关日志自动解析并发送到 Langfuse，用于 AI 应用的观测和分析。支持docker一键部署和本地测试部署。
+高性能实时数据同步服务，将阿里云 SLS 中的 AI 网关日志自动解析并发送到 Langfuse，用于 AI 应用的观测和分析。支持docker一键部署和本地测试部署。
 
 ## 前置条件
-
-在开始部署前，请务必确保环境满足以下要求。不满足这些条件是导致部署失败的最常见原因。
 
 ### 1. AI 网关配置
 
@@ -43,7 +41,7 @@
 ### 1. 克隆仓库
 
 ```bash
-git clone https://github.com/your-username/sls-to-langfuse.git
+git clone https://github.com/OpZ6/sls-to-langfuse.git
 cd sls-to-langfuse
 ```
 
