@@ -1,336 +1,172 @@
 SLS to Langfuse Real-time Sync Service
-一个高性能的实时数据同步服务，将阿里云SLS中的AI网关访问日志自动解析并发送到Langfuse，用于AI应用的观测和分析。
-功能特性
+<p align="left"> <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker"> <img src="https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.11"> <img src="https://img.shields.io/badge/阿里云-SLS-FF6A00?style=for-the-badge&logo=alibabacloud&logoColor=white" alt="Alibaba Cloud SLS"> <img src="https://img.shields.io/badge/Langfuse-Integration-5A34D2?style=for-the-badge" alt="Langfuse"> </p>
+A high-performance, real-time data synchronization service that automatically parses AI gateway access logs from Alibaba Cloud SLS and sends them to Langfuse for AI application observability and analysis.
 
-实时消费: 基于阿里云SLS Consumer Group，实现毫秒级日志同步
-智能解析: 自动识别和解析AI网关日志中的对话数据
-可靠传输: 内置重试机制和死信队列，确保数据不丢失
-性能优化: 高并发处理，支持多分片并行消费
-监控友好: 详细的日志记录和处理统计
-环境适配: 支持开发/生产环境的不同配置
+🎯 Core Features
+✅ Real-time Consumption: Achieves millisecond-level log synchronization based on Alibaba Cloud SLS Consumer Groups.
+✅ Intelligent Parsing: Automatically identifies and parses conversational data from AI gateway logs.
+✅ Reliable Transmission: Ensures no data loss with a built-in retry mechanism and dead-letter queue.
+✅ Performance Optimized: Handles high concurrency with support for parallel consumption across multiple shards.
+✅ Monitoring Friendly: Provides detailed logging and processing statistics for easy observation.
+✅ Environment Adaptive: Supports different configurations for development and production environments.
+⚠️ Important Prerequisites
+Before you begin, please ensure your environment meets the following requirements. Failure to meet these conditions is the most common cause of deployment issues.
 
-适用场景
-支持的AI网关类型
+1. AI Gateway Configuration
+Your AI Gateway must be configured to output access logs to Alibaba Cloud SLS. The log format is critical for the service to function correctly.
 
-阿里云API网关 + AI服务集成
-自建AI网关（需输出标准格式日志到SLS）
-支持以下AI服务：通义千问、GPT、Claude等
-
-支持的日志格式
-
-包含 ai_log 字段的JSON格式日志
-必须包含 trace_id、question、answer 等关键字段
-支持多轮对话和复杂对话场景
-
-重要前置条件
-AI网关配置要求
-
-必须开启链路追踪: AI网关需要配置将访问日志输出到阿里云SLS
-
-日志格式要求: 确保日志包含以下字段：
-
-
+Enable Tracing: The gateway's tracing or logging feature must be active.
+JSON Log Format: Logs must be in JSON format and contain a specific ai_log field, which itself is a JSON string.
+Required Fields: The log entry must include the following key fields:
+json
 {
-  "trace_id": "唯一追踪ID",
-  "question": "用户输入",
-  "answer": "AI回复", 
-  "ai_log": "{JSON格式的AI服务详细信息}",
-  "response_code": "HTTP状态码",
-  "duration": "请求耗时"
-}
+      "trace_id": "unique-trace-id-for-the-request",
+      "question": "The user's input/prompt",
+      "answer": "The AI's response",
+      "ai_log": "{\"model_name\":\"qwen-vl\", \"usage\":{\"total_tokens\": 120}}",
+      "response_code": 200,
+      "duration": 540
+    }
+2. Infrastructure Requirements
+Alibaba Cloud SLS: An active SLS project and Logstore are required.
+Langfuse Instance: A running and accessible Langfuse service (self-hosted or cloud).
+Docker Environment: Docker 20.10+ installed on your server.
+Network Connectivity: The server/container must have network access to both the Alibaba Cloud SLS endpoint and your Langfuse host.
+🚀 Quick Start & Deployment
+Follow these steps to get the service running.
 
-
-SLS Logstore配置: 确保已创建对应的Project和Logstore
-
-基础设施要求
-
-阿里云SLS: 已配置的项目和日志库
-Langfuse实例: 可访问的Langfuse服务
-Docker环境: Docker 20.10+ 和 Docker Compose（可选）
-网络连通性: 确保容器可以访问阿里云SLS和Langfuse服务
-
-快速开始
-1. 克隆项目
+1. Clone the Repository
+bash
 git clone https://github.com/your-username/sls-to-langfuse.git
 cd sls-to-langfuse
+2. Configure Environment Variables
+The service is configured entirely through environment variables. Create a .env file from the example.
 
-2. 配置环境变量
-复制并编辑配置文件：
+bash
 cp .env.example .env
-vim .env
+Now, edit the .env file with your specific credentials and endpoints.
 
-关键配置说明：
-# ======== 阿里云SLS配置 ========
-ALIYUN_ENDPOINT=cn-shanghai.log.aliyuncs.com  # 根据你的区域调整
-ALIYUN_ACCESS_KEY_ID=YOUR_ACCESS_KEY_ID       # 阿里云访问密钥
-ALIYUN_ACCESS_KEY_SECRET=YOUR_ACCESS_SECRET   # 阿里云访问密钥
-ALIYUN_PROJECT_NAME=your-sls-project          # SLS项目名称
-ALIYUN_LOGSTORE_NAME=your-logstore            # SLS日志库名称
-ALIYUN_CONSUMER_GROUP_NAME=langfuse-consumer-v1  # 消费组名称（自定义）
+bash
+# .env
 
-# ======== Langfuse配置 ========
-LANGFUSE_HOST=https://your-langfuse-domain.com  # Langfuse服务地址
-LANGFUSE_PUBLIC_KEY=pk-your-public-key          # Langfuse公钥
-LANGFUSE_SECRET_KEY=sk-your-secret-key          # Langfuse私钥
-LANGFUSE_SDK_TIMEOUT=30                         # SDK超时时间
+# ======== Alibaba Cloud SLS Configuration ========
+ALIYUN_ENDPOINT=cn-shanghai.log.aliyuncs.com  # Adjust to your SLS region
+ALIYUN_ACCESS_KEY_ID=YOUR_ACCESS_KEY_ID       # Your Alibaba Cloud Access Key
+ALIYUN_ACCESS_KEY_SECRET=YOUR_ACCESS_SECRET   # Your Alibaba Cloud Access Secret
+ALIYUN_PROJECT_NAME=your-sls-project-name     # Your SLS Project
+ALIYUN_LOGSTORE_NAME=your-logstore-name       # Your SLS Logstore
+ALIYUN_CONSUMER_GROUP_NAME=langfuse-consumer-prod-v1 # A custom name for the consumer group (see notes below)
 
-# ======== 应用配置 ========
-TZ=Asia/Shanghai          # 时区设置
-LOG_FORMAT=human          # 日志格式：human(开发) / json(生产)
+# ======== Langfuse Configuration ========
+LANGFUSE_HOST=https://your-langfuse-instance.com # Your Langfuse host URL
+LANGFUSE_PUBLIC_KEY=pk-lf-xxxxxxxxxxxxxxxxxxxx # Your Langfuse public key
+LANGFUSE_SECRET_KEY=sk-lf-xxxxxxxxxxxxxxxxxxxx # Your Langfuse secret key
+LANGFUSE_SDK_TIMEOUT=30                      # SDK timeout in seconds (optional)
 
-3. 一键部署
-# 确保脚本可执行
+# ======== Application & Logging Configuration ========
+TZ=Asia/Shanghai          # Set container timezone (e.g., Asia/Shanghai)
+LOG_FORMAT=json           # Log format: 'human' for development, 'json' for production
+3. Deploy with the Script
+The provided deploy.sh script automates the entire process of pulling the latest code, rebuilding the Docker image, and restarting the container.
+
+bash
+# Make the script executable
 chmod +x deploy.sh
 
-# 部署服务
+# Run the deployment
 ./deploy.sh
+4. Verify the Service
+Check the container's status and logs to ensure it's running correctly.
 
-4. 验证运行
-# 查看实时日志
+bash
+# Check if the container is running
+docker ps | grep sls_processor_instance
+
+# View real-time logs
 docker logs -f sls_processor_instance
+If everything is configured correctly, you should see logs indicating that the service has started and is attempting to pull data from your SLS shards.
 
-# 检查容器状态
-docker ps | grep sls_processor
+🐳 Docker Image & Customization
+Image Source
+Note To improve build speeds for users in mainland China, the Dockerfile uses a Python base image from a Huawei Cloud mirror.
 
-详细配置说明
-环境变量完整列表
+dockerfile
+> FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/python:3.11-slim
+>
+If you are outside of China or prefer using the official Docker Hub source, please modify the Dockerfile to:
 
+dockerfile
+> FROM python:3.11-slim
+>
+Similarly, Python dependencies are installed using a Tsinghua pip mirror. This can be removed in the RUN command inside the Dockerfile if not needed.
 
+Custom Builds
+If you make changes to the source code, you can build and push your own image:
 
-变量名
-必需
-默认值
-说明
-
-
-
-ALIYUN_ENDPOINT
-是
-无
-阿里云SLS服务端点
-
-
-ALIYUN_ACCESS_KEY_ID
-是
-无
-阿里云访问密钥ID
-
-
-ALIYUN_ACCESS_KEY_SECRET
-是
-无
-阿里云访问密钥
-
-
-ALIYUN_PROJECT_NAME
-是
-无
-SLS项目名称
-
-
-ALIYUN_LOGSTORE_NAME
-是
-无
-SLS日志库名称
-
-
-ALIYUN_CONSUMER_GROUP_NAME
-是
-无
-消费组名称
-
-
-LANGFUSE_HOST
-是
-无
-Langfuse服务地址
-
-
-LANGFUSE_PUBLIC_KEY
-是
-无
-Langfuse公钥
-
-
-LANGFUSE_SECRET_KEY
-是
-无
-Langfuse私钥
-
-
-LANGFUSE_SDK_TIMEOUT
-否
-30
-SDK超时时间(秒)
-
-
-TZ
-否
-UTC
-容器时区
-
-
-LOG_FORMAT
-否
-human
-日志格式
-
-
-消费组名称说明
-
-重要: ALIYUN_CONSUMER_GROUP_NAME 决定了消费进度的保存位置。
-
-相同名称 = 继承之前的消费进度
-不同名称 = 重新开始消费（可能导致重复处理）
-
-
-建议命名规范：
-# 开发环境
-ALIYUN_CONSUMER_GROUP_NAME=langfuse-consumer-dev
-
-# 测试环境  
-ALIYUN_CONSUMER_GROUP_NAME=langfuse-consumer-test
-
-# 生产环境
-ALIYUN_CONSUMER_GROUP_NAME=langfuse-consumer-prod
-
-Docker镜像说明
-镜像源配置
-本项目使用华为云镜像源以提高国内用户的下载速度：
-FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/python:3.11-slim
-
-如需使用官方镜像，请修改 Dockerfile：
-# 官方镜像（国外网络环境）
-FROM python:3.11-slim
-
-自定义构建
-# 构建自定义镜像
+bash
+# Build a custom image
 docker build -t your-registry/sls-to-langfuse:latest .
 
-# 推送到私有仓库
+# Push to a private registry
 docker push your-registry/sls-to-langfuse:latest
+⚙️ Detailed Configuration
+Environment Variables
+Variable	Required	Default Value	Description
+ALIYUN_ENDPOINT	✅	—	Alibaba Cloud SLS endpoint for your region.
+ALIYUN_ACCESS_KEY_ID	✅	—	Your Alibaba Cloud Access Key ID.
+ALIYUN_ACCESS_KEY_SECRET	✅	—	Your Alibaba Cloud Access Key Secret.
+ALIYUN_PROJECT_NAME	✅	—	The name of your SLS Project.
+ALIYUN_LOGSTORE_NAME	✅	—	The name of your SLS Logstore where gateway logs are stored.
+ALIYUN_CONSUMER_GROUP_NAME	✅	—	Crucial: A unique name for the consumer group. See the note below.
+LANGFUSE_HOST	✅	—	The full URL of your Langfuse instance.
+LANGFUSE_PUBLIC_KEY	✅	—	The public key from your Langfuse project.
+LANGFUSE_SECRET_KEY	✅	—	The secret key from your Langfuse project.
+LANGFUSE_SDK_TIMEOUT	❌	30	Timeout in seconds for requests made to the Langfuse API.
+TZ	❌	UTC	Timezone for the container to ensure logs have correct timestamps.
+LOG_FORMAT	❌	human	human for readable logs (dev), json for structured logs (prod).
+⚠️ A Note on ALIYUN_CONSUMER_GROUP_NAME This name determines where the service starts reading logs.
 
-监控和运维
-关键指标监控
-服务运行时会输出以下关键指标：
-# 成功处理的日志
-✅ 发送成功: Trace [ bc4f12c039b76993... ] | API [ qwen-vl@_origin_@_reserved_ ]
+Using the same name allows the service to pick up where it left off.
+Changing the name will cause the service to start consuming all logs from the very beginning, which can lead to massive data duplication in Langfuse.
+It is recommended to use different names for different environments (e.g., langfuse-consumer-dev, langfuse-consumer-prod).
 
-# 分片状态
-👍 分片 0 的生产者已启动
-💾 分片 0 的检查点已成功提交
+🔍 Monitoring & Troubleshooting
+Common Problems
+Container Fails to Start:
 
-# 错误信息
-❌ 发送失败 (尝试 1/3): Trace [ abc123... ]
-🚨 发送最终失败，已放弃: Trace [ def456... ]
+Check the .env file: Ensure all required variables are set and there are no syntax errors.
+Check permissions: Ensure the user running the Docker command has permissions to access the Docker daemon.
+No Logs Being Consumed:
 
-故障排除
-问题1：容器启动失败
-# 检查环境变量
-docker run --rm --env-file .env sls-to-langfuse-service env
-
-# 检查网络连通性
-docker run --rm --env-file .env sls-to-langfuse-service ping cn-shanghai.log.aliyuncs.com
-
-问题2：无法消费日志
-确保Access Key具有以下权限：
-
+Check IAM Permissions: The Alibaba Cloud Access Key needs permissions for SLS, including:
 log:GetConsumerGroupCheckPoint
 log:UpdateConsumerGroup
 log:ConsumerGroupUpdateCheckPoint
 log:ListConsumerGroup
 log:PullLogs
-
-问题3：Langfuse连接失败
-# 测试Langfuse连接
-curl -X GET "${LANGFUSE_HOST}/api/public/health"
-
-# 检查密钥配置
-# 确保Public Key和Secret Key匹配且有效
-
-问题4：重复处理日志
-
-原因: 消费组名称变更或检查点丢失
-解决: 保持消费组名称一致，检查SLS控制台的消费组状态
-
-运维命令
-# 查看服务状态
+Check Network Connectivity: From within the container, try to ping the SLS endpoint.
+bash
+docker exec -it sls_processor_instance ping cn-shanghai.log.aliyuncs.com
+Langfuse Connection Failed:
+Check Host and Keys: Double-check that LANGFUSE_HOST, LANGFUSE_PUBLIC_KEY, and LANGFUSE_SECRET_KEY are correct.
+Test Health Endpoint: Use curl to see if the Langfuse instance is reachable from the server.
+bash
+curl -X GET "https://your-langfuse-instance.com/api/public/health"
+Duplicate Data in Langfuse:
+This is almost always caused by changing the ALIYUN_CONSUMER_GROUP_NAME or manually deleting a consumer group in the SLS console, which resets the consumption checkpoint. Always use a consistent name.
+Useful Commands
+bash
+# View service status
 docker ps | grep sls_processor
 
-# 重启服务
+# Gracefully restart the service with the latest code
 ./deploy.sh
 
-# 查看详细日志
+# View the last 100 lines of logs and follow in real-time
 docker logs --tail 100 -f sls_processor_instance
 
-# 进入容器调试
+# Enter the container for debugging
 docker exec -it sls_processor_instance /bin/bash
 
-# 清理旧镜像
-docker image prune -f
-
-# 停止服务
-docker stop sls_processor_instance
-docker rm sls_processor_instance
-
-安全注意事项
-
-敏感信息保护:
-
-不要将 .env 文件提交到版本控制
-定期轮换阿里云Access Key和Langfuse密钥
-使用最小权限原则配置IAM
-
-
-网络安全:
-
-确保容器运行在安全的网络环境中
-考虑使用VPN或专线连接云服务
-
-
-数据隐私:
-
-注意AI对话内容可能包含敏感信息
-确保Langfuse部署符合数据合规要求
-
-
-
-开发指南
-本地开发
-# 安装依赖
-pip install -r requirements.txt
-
-# 设置环境变量
-export $(cat .env | xargs)
-
-# 运行服务
-python -m sls_processor.main
-
-测试
-# 单元测试
-python -m pytest tests/
-
-# 集成测试
-python -m pytest tests/integration/
-
-# 性能测试
-python -m pytest tests/performance/
-
-代码结构
-sls_processor/
-├── main.py          # 主程序入口
-├── consumer.py      # SLS消费者逻辑
-├── processor.py     # 数据处理和转换
-└── models/          # 数据模型定义
-    ├── sls_log.py
-    └── langfuse_data.py
-
-许可证
-本项目采用 MIT 许可证 - 查看 LICENSE 文件了解详情。
-获得帮助
-
-项目文档
-报告Bug
-讨论区
-
-如果这个项目对你有帮助，请给我们一个Star！
+# Stop and remove the service container
+docker stop sls_processor_instance && docker rm sls_processor_instance
