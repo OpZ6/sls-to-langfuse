@@ -1,4 +1,4 @@
-# sls_consumer.py
+# sls_processor/sls_consumer.py
 
 import logging
 import time

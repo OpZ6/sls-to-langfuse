@@ -2,3 +2,4 @@
 aliyun-log-python-sdk
 langfuse
 python-dotenv
+python-json-logger

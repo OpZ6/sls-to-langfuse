@@ -1,4 +1,4 @@
-# langfuse_processor.py
+# sls_processor/processor.py
 
 import json
 import logging

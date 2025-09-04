@@ -6,21 +6,39 @@ import threading
 import time
 from queue import Queue
 
-# --- ✨ 新增: 加载环境变量 ---
+# --- ✨ 新增: 加载环境变量 和 JSON日志格式化器 ---
 from dotenv import load_dotenv
-load_dotenv() # 会自动寻找项目根目录的 .env 文件并加载
+from python_json_logger import jsonlogger
+
+load_dotenv()
+
+# --- ✨ 全新的、生产级的JSON日志配置 ---
+# 移除旧的 logging.basicConfig
+# logging.basicConfig(...) 
+
+# 获取根logger
+logger = logging.getLogger()
+# 设置日志级别
+logger.setLevel(logging.INFO)
+
+# 创建一个输出到控制台的handler
+logHandler = logging.StreamHandler()
+
+# 创建一个JSON格式化器，并定义我们希望在日志中看到的字段
+formatter = jsonlogger.JsonFormatter(
+    '%(timestamp)s %(levelname)s %(name)s %(threadName)s %(message)s'
+)
+
+# 为handler设置格式化器
+logHandler.setFormatter(formatter)
+# 为根logger添加handler
+logger.addHandler(logHandler)
+# --- JSON日志配置结束 ---
 
 from aliyun.log import LogClient
 from aliyun.log.consumer import CursorPosition, LogHubConfig
-
-# --- ✨ 修改: 从内部模块导入 ---
 from .consumer import start_sls_consumer_worker
 from .processor import process_logs_from_queue
-
-# --- 配置区 (集中管理) ---
-# 日志配置
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(threadName)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 
 # 阿里云 SLS 配置
 ENDPOINT = os.getenv("ALIYUN_ENDPOINT")
