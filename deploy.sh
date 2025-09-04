@@ -23,21 +23,24 @@ git pull origin main # 假设你的主分支是 main
 echo "🛠️ 正在构建新的Docker镜像 (tag: $IMAGE_NAME)..."
 docker build -t $IMAGE_NAME .
 
-# 3. 检查旧容器是否存在，如果存在则停止并移除
-# -q: 只显示容器ID; -f name=...: 按名称过滤
+# 3. 检查并清理旧容器
 if [ "$(docker ps -q -f name=$CONTAINER_NAME)" ]; then
     echo "🛑 正在停止旧的容器..."
     docker stop $CONTAINER_NAME
+fi
+
+if [ "$(docker ps -aq -f name=$CONTAINER_NAME)" ]; then
     echo "🗑️ 正在移除旧的容器..."
     docker rm $CONTAINER_NAME
 fi
 
-# 4. 使用新镜像和.env文件启动新容器
+# 4. 启动新容器 - 完全依赖.env文件
 echo "🚀 正在启动新容器..."
-docker run --detach --name $CONTAINER_NAME \
-  --env-file $ENV_FILE \
-  --restart always \
-  $IMAGE_NAME
-
+docker run -d \
+    --name $CONTAINER_NAME \
+    --env-file $ENV_FILE \
+    --restart unless-stopped \
+    $IMAGE_NAME
+    
 echo "✅ 部署完成！服务 '$CONTAINER_NAME' 已成功启动。"
 echo "   使用 'docker logs -f $CONTAINER_NAME' 查看实时日志。"

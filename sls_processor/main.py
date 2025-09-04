@@ -82,7 +82,10 @@ def main():
     stop_event = threading.Event()
 
     # 3. 准备SLS消费者配置
-    consumer_name = f"{CONSUMER_NAME_PREFIX}-{int(time.time())}"
+    # --- ✨ 修复：使用固定的消费者名称 ---
+    consumer_name = f"{CONSUMER_NAME_PREFIX}-stable"  # 固定名称
+    # 或者基于容器ID或主机名：
+    # consumer_name = f"{CONSUMER_NAME_PREFIX}-{os.environ.get('HOSTNAME', 'default')}"
     logger.info(f"本次消费者名称: {consumer_name}")
     
     client = LogClient(ENDPOINT, ACCESS_KEY_ID, ACCESS_KEY_SECRET)
