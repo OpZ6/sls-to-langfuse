@@ -50,15 +50,22 @@ class LogQueueProducer(ConsumerProcessorBase):
             if put_count > 0:
                 logger.debug(f"分片 {self.shard_id}: 本批次 {put_count} 条有效日志已放入队列。当前队列大小: {self.log_queue.qsize()}")
         
-        finally:
-            # --- ✨ 核心修正：无论如何都提交检查点 ---
-            # 即使这批日志处理失败（例如队列满了），我们也需要前进，避免卡住一直处理同一批日志。
-            # 如果需要保证数据绝对不丢失，你可以在这里加入更复杂的重试或失败处理逻辑。
-            try:
-                check_point_tracker.save_check_point(wait_succ=True)
-                logger.info(f"💾 分片 {self.shard_id} 的检查点已成功提交。")
-            except Exception as e:
-                logger.error(f"提交分片 {self.shard_id} 的检查点失败: {e}")
+            finally:
+                # --- ✨ 轻量级重试（不阻塞主流程） ---
+                max_retries = 2  # 保持轻量
+                for attempt in range(max_retries + 1):
+                    try:
+                        check_point_tracker.save_check_point(True)
+                        logger.info(f"💾 分片 {self.shard_id} 的检查点已成功提交 (尝试 {attempt + 1})")
+                        break
+                    except Exception as e:
+                        if attempt == max_retries:
+                            logger.error(f"🚨 分片 {self.shard_id} 检查点最终失败，已记录: {e}")
+                            # 可选：记录到监控系统
+                            self._record_checkpoint_failure(self.shard_id, str(e))
+                        else:
+                            logger.warning(f"⚠️ 分片 {self.shard_id} 检查点重试 {attempt + 1}: {e}")
+                            time.sleep(0.5)  # 很短的延迟
             
     def shutdown(self, check_point_tracker):
         logger.info(f"ℹ️ 生产者正在为分片 {self.shard_id} 关闭...")
