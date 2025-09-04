@@ -8,7 +8,7 @@ from queue import Queue
 
 # --- ✨ 新增: 加载环境变量 和 JSON日志格式化器 ---
 from dotenv import load_dotenv
-from python_json_logger import jsonlogger
+from pythonjsonlogger import jsonlogger
 
 load_dotenv()
 
