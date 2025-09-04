@@ -1,0 +1,26 @@
+# .gitignore
+
+# 1. 忽略敏感的配置文件
+# 这是最重要的规则！绝不要将包含密钥的文件上传。
+.env
+
+# 2. 忽略Python生成的缓存和字节码文件
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 3. 忽略Python虚拟环境文件夹
+# 根据您创建虚拟环境的工具和名称，可能会有所不同
+sls/
+venv/
+env/
+.venv/
+
+# 4. 忽略IDE/编辑器相关的配置文件夹
+.vscode/
+.idea/
+
+# 5. 忽略操作系统生成的文件
+.DS_Store
+Thumbs.db
