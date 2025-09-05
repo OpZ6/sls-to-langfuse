@@ -261,49 +261,93 @@ class LangfuseSender:
             logger.error(f"❌ Langfuse客户端初始化失败: {e}", exc_info=True)
             raise
 
-
     def send_trace_with_generation(self, data: Dict[str, Any]) -> bool:
-        """发送trace和generation"""
+        """
+        发送trace和generation。
+        """
+        # 1. 从转换后的数据中获取原始的SLS Trace ID
+        sls_trace_id = data.get('metadata', {}).get('original_trace', {}).get('sls_trace_id')
+
+        # 2. 检查ID是否存在
+        if not sls_trace_id:
+            logger.warning(f"在日志中未找到有效的sls_trace_id，已跳过发送。")
+            return False
+
         try:
-            with self.langfuse.start_as_current_span(
+            # 3. ✨【关键优化】✨ 直接将 sls_trace_id 作为 id 参数传入。
+            # 因为我们已确认其格式天然兼容，无需再调用 create_trace_id。
+            trace = self.langfuse.trace(
+                id=sls_trace_id,  # 直接使用，不再转换
                 name=data.get('trace_name', 'AI Request'),
-                input=data.get('trace_input')
-            ) as root_span:
-                
-                root_span.update_trace(
-                    input=data.get('trace_input'),
-                    output=data.get('trace_output'),
-                    user_id=data.get('user_id'),
-                    session_id=data.get('session_id'),
-                    tags=data.get('tags', []),
-                    metadata=data.get('metadata', {})
-                )
-                
-                root_span.update(output=data.get('trace_output'), metadata=data.get('metadata', {}))
-                
-                with self.langfuse.start_as_current_observation(
-                    as_type='generation',
-                    name=data.get('generation_name', 'AI Generation'),
-                    input=data.get('generation_input'),
-                    model=data.get('model')
-                ) as generation:
-                    
-                    update_params = {
-                        'output': data.get('generation_output'),
-                        'level': data.get('level', 'DEFAULT'),
-                        'status_message': data.get('status_message', ''),
-                        'metadata': data.get('metadata', {})
-                    }
-                    
-                    if data.get('usage_details'):
-                        update_params['usage_details'] = data.get('usage_details')
-                    
-                    generation.update(**update_params)
+                # ... 其他参数保持不变 ...
+                input=data.get('trace_input'),
+                output=data.get('trace_output'),
+                user_id=data.get('user_id'),
+                session_id=data.get('session_id'),
+                tags=data.get('tags', []),
+                metadata=data.get('metadata', {})
+            )
+            
+            # 4. 在该Trace下追加一个Generation
+            trace.generation(
+                name=data.get('generation_name', 'AI Generation'),
+                # ... 其他参数保持不变 ...
+                input=data.get('generation_input'),
+                output=data.get('generation_output'),
+                model=data.get('model'),
+                level=data.get('level', 'DEFAULT'),
+                status_message=data.get('status_message', ''),
+                metadata=data.get('metadata', {}),
+                usage=data.get('usage_details')
+            )
             
             return True
         except Exception as e:
-            logger.error(f"发送到Langfuse失败: {e}")
+            logger.error(f"发送到Langfuse失败 (Trace ID: {sls_trace_id}): {e}", exc_info=True)
             return False
+
+    # def send_trace_with_generation(self, data: Dict[str, Any]) -> bool:
+    #     """发送trace和generation(旧版本）"""
+    #     try:
+    #         with self.langfuse.start_as_current_span(
+    #             name=data.get('trace_name', 'AI Request'),
+    #             input=data.get('trace_input')
+    #         ) as root_span:
+                
+    #             root_span.update_trace(
+    #                 input=data.get('trace_input'),
+    #                 output=data.get('trace_output'),
+    #                 user_id=data.get('user_id'),
+    #                 session_id=data.get('session_id'),
+    #                 tags=data.get('tags', []),
+    #                 metadata=data.get('metadata', {})
+    #             )
+                
+    #             root_span.update(output=data.get('trace_output'), metadata=data.get('metadata', {}))
+                
+    #             with self.langfuse.start_as_current_observation(
+    #                 as_type='generation',
+    #                 name=data.get('generation_name', 'AI Generation'),
+    #                 input=data.get('generation_input'),
+    #                 model=data.get('model')
+    #             ) as generation:
+                    
+    #                 update_params = {
+    #                     'output': data.get('generation_output'),
+    #                     'level': data.get('level', 'DEFAULT'),
+    #                     'status_message': data.get('status_message', ''),
+    #                     'metadata': data.get('metadata', {})
+    #                 }
+                    
+    #                 if data.get('usage_details'):
+    #                     update_params['usage_details'] = data.get('usage_details')
+                    
+    #                 generation.update(**update_params)
+            
+    #         return True
+    #     except Exception as e:
+    #         logger.error(f"发送到Langfuse失败: {e}")
+    #         return False
     
     def flush(self) -> bool:
         try:
