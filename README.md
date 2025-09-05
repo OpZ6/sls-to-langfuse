@@ -213,5 +213,8 @@ docker stop sls_processor_instance && docker rm sls_processor_instance
 
 ## 待开发
 
+-   ~~save_check_point()中SLS trace_id与langfuse trace_id可能存在的冲突处理 **（已解决）**~~
 -   Agent调用的同trace_id多日志智能缓存，聚合展示能力
--   save_check_point()中SLS trace_id与langfuse trace_id可能存在的冲突处理 **（紧急）**
+-   先确保agent api相关问题解决（Agent api效果测试：数据链路是否会固定traceid + 是否langfuse自动聚合）
+-   研究本地运行的Agent框架（重复与关联问题）
+
